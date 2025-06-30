@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#D32F2F"
+    android:elevation="16dp">
+
+    <!-- Top red warning banner -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#D32F2F"
+        android:padding="20dp">
+
+        <!-- Header with warning icon and close button -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp">
+
+            <!-- Warning icon -->
+            <ImageView
+                android:id="@+id/warningIcon"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_centerVertical="true"
+                android:src="@android:drawable/ic_dialog_alert"
+                android:tint="@android:color/white"
+                android:layout_marginEnd="12dp" />
+
+            <!-- Title -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerVertical="true"
+                android:layout_toEndOf="@id/warningIcon"
+                android:layout_toStartOf="@id/btnClose"
+                android:text="🐠 DEEPFAKE ALERT"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/white"
+                android:textAllCaps="true" />
+
+            <!-- Close button -->
+            <ImageButton
+                android:id="@+id/btnClose"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_menu_close_clear_cancel"
+                android:tint="@android:color/white"
+                android:contentDescription="Close alert"
+                android:scaleType="centerInside" />
+
+        </RelativeLayout>
+
+        <!-- Main warning message -->
+        <TextView
+            android:id="@+id/tvMessage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="fishy.watch: This call exhibits multiple signs of a deepfake phishing attack. Proceed with extreme caution."
+            android:textSize="16sp"
+            android:textColor="@android:color/white"
+            android:textStyle="bold"
+            android:lineSpacingExtra="4dp"
+            android:layout_marginBottom="20dp"
+            android:gravity="start" />
+
+        <!-- Action buttons row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <!-- End call button -->
+            <Button
+                android:id="@+id/btnEndCall"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="END CALL"
+                android:textColor="@android:color/white"
+                android:textStyle="bold"
+                android:background="#B71C1C"
+                android:padding="12dp"
+                android:textAllCaps="true" />
+
+            <!-- Learn more button -->
+            <Button
+                android:id="@+id/btnAction"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="LEARN MORE"
+                android:textColor="#D32F2F"
+                android:textStyle="bold"
+                android:background="@android:color/white"
+                android:padding="12dp"
+                android:textAllCaps="true" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Bottom accent strip for extra attention -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:background="#B71C1C" />
+
+</LinearLayout> 

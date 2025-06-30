@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">fishy.watch</string>
+    <string name="title_home">Home</string>
+    <string name="title_dashboard">Dashboard</string>
+    <string name="title_key_exchange">Key Exchange</string>
+    <string name="title_debug_tools">Debug Tools</string>
+    <string name="title_profile">Profile</string>
+    <string name="secure_authentication_network">Secure Authentication Network</string>
+    <string name="trusted_contacts">Trusted Contacts</string>
+    <string name="online">Online</string>
+    <string name="offline">Offline</string>
+    <string name="last_seen">Last seen</string>
+    <string name="exchanged">Exchanged</string>
+    <string name="device">Device</string>
+</resources>

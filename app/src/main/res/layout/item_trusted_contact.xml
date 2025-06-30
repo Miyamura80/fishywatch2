@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="4dp">
+
+        <TextView
+            android:id="@+id/textContactName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Contact Name"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/black" />
+
+        <TextView
+            android:id="@+id/textContactStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="● offline"
+            android:textSize="12sp"
+            android:textColor="#F44336" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/textContactDevice"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Device: device_abc123..."
+        android:textSize="12sp"
+        android:textColor="@android:color/darker_gray"
+        android:layout_marginBottom="2dp" />
+
+    <TextView
+        android:id="@+id/textContactExchanged"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="✓ Exchanged 30/06/2024"
+        android:textSize="12sp"
+        android:textColor="@android:color/darker_gray"
+        android:layout_marginBottom="2dp" />
+
+    <TextView
+        android:id="@+id/textContactLastSeen"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="🕐 Last seen 2 minutes ago"
+        android:textSize="12sp"
+        android:textColor="@android:color/darker_gray" />
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#E0E0E0"
+        android:layout_marginTop="12dp" />
+
+</LinearLayout> 

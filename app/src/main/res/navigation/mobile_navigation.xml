@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mobile_navigation"
+    app:startDestination="@+id/navigation_dashboard">
+
+    <fragment
+        android:id="@+id/navigation_dashboard"
+        android:name="com.example.fishy_watch_2.ui.dashboard.DashboardFragment"
+        android:label="@string/title_dashboard"
+        tools:layout="@layout/fragment_dashboard" />
+
+    <fragment
+        android:id="@+id/navigation_key_exchange"
+        android:name="com.example.fishy_watch_2.ui.home.HomeFragment"
+        android:label="@string/title_key_exchange"
+        tools:layout="@layout/fragment_home" />
+
+    <fragment
+        android:id="@+id/navigation_debug_tools"
+        android:name="com.example.fishy_watch_2.ui.debug.DebugToolsFragment"
+        android:label="@string/title_debug_tools"
+        tools:layout="@layout/fragment_debug_tools" />
+
+    <fragment
+        android:id="@+id/navigation_profile"
+        android:name="com.example.fishy_watch_2.ui.profile.ProfileFragment"
+        android:label="@string/title_profile"
+        tools:layout="@layout/fragment_profile" />
+</navigation>
