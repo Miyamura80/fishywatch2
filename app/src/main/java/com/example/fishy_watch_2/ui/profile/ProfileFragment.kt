@@ -4,11 +4,9 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.nfc.NdefMessage
-import android.nfc.NdefRecord
 import android.nfc.NfcAdapter
 import android.nfc.Tag
-import android.nfc.tech.Ndef
+import android.nfc.tech.IsoDep
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
@@ -19,18 +17,24 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.fishy_watch_2.ContactManager
+import com.example.fishy_watch_2.NFCCardEmulationService
+import com.example.fishy_watch_2.NFCReader
 import com.example.fishy_watch_2.R
 import com.example.fishy_watch_2.TrustedContact
+import com.example.fishy_watch_2.VoiceRecordingActivity
 import com.example.fishy_watch_2.databinding.FragmentProfileBinding
 import com.google.android.material.textfield.TextInputEditText
-import org.json.JSONObject
-import java.nio.charset.Charset
-import java.util.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ProfileFragment : Fragment() {
 
@@ -64,6 +68,37 @@ class ProfileFragment : Fragment() {
     private var isPairingActive = false
     private var deviceId: String = ""
     private var userName: String = ""
+    
+    // Temporary contact for voice recording
+    private var pendingContact: TrustedContact? = null
+    
+    // Activity result launcher for voice recording
+    private val voiceRecordingLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val data = result.data
+            val contactName = data?.getStringExtra(VoiceRecordingActivity.EXTRA_CONTACT_NAME)
+            val contactDeviceId = data?.getStringExtra(VoiceRecordingActivity.EXTRA_CONTACT_DEVICE_ID)
+            val voiceFilePath = data?.getStringExtra(VoiceRecordingActivity.EXTRA_VOICE_FILE_PATH)
+            
+            Log.d(TAG, "Voice recording completed for: $contactName")
+            
+            if (contactName != null && contactDeviceId != null && voiceFilePath != null) {
+                // Create final contact with voice signature
+                val finalContact = pendingContact?.copy(voiceSignaturePath = voiceFilePath)
+                if (finalContact != null) {
+                    saveFinalContact(finalContact)
+                }
+            } else {
+                Log.w(TAG, "Missing voice recording data")
+                Toast.makeText(requireContext(), "Voice recording failed. Contact not saved.", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Log.d(TAG, "Voice recording cancelled")
+            Toast.makeText(requireContext(), "Voice recording cancelled. Contact not saved.", Toast.LENGTH_SHORT).show()
+        }
+        
+        pendingContact = null
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -116,19 +151,11 @@ class ProfileFragment : Fragment() {
             PendingIntent.FLAG_MUTABLE
         )
         
-        // Setup intent filters for NFC
-        val ndefFilter = IntentFilter(NfcAdapter.ACTION_NDEF_DISCOVERED).apply {
-            try {
-                addDataType("application/fishy.watch")
-            } catch (e: IntentFilter.MalformedMimeTypeException) {
-                Log.e(TAG, "Malformed MIME type", e)
-            }
-        }
-        
+        // Setup intent filters for NFC tech discovery (for reading HCE devices)
         val techFilter = IntentFilter(NfcAdapter.ACTION_TECH_DISCOVERED)
         val tagFilter = IntentFilter(NfcAdapter.ACTION_TAG_DISCOVERED)
         
-        intentFiltersArray = arrayOf(ndefFilter, techFilter, tagFilter)
+        intentFiltersArray = arrayOf(techFilter, tagFilter)
     }
     
     private fun loadUserProfile() {
@@ -177,22 +204,28 @@ class ProfileFragment : Fragment() {
         prefs.edit().putString(KEY_USER_NAME, newName).apply()
         
         userName = newName
-        Toast.makeText(requireContext(), "Profile saved!", Toast.LENGTH_SHORT).show()
+        setupCardEmulation()
         
-        Log.d(TAG, "Profile saved - User: $userName")
+        Toast.makeText(requireContext(), "Profile saved successfully! ✅", Toast.LENGTH_SHORT).show()
+        Log.d(TAG, "Profile saved - User: $userName, Device: $deviceId")
     }
     
     private fun toggleNFCPairing() {
-        if (!isPairingActive) {
-            startNFCPairing()
-        } else {
+        if (isPairingActive) {
             stopNFCPairing()
+        } else {
+            startNFCPairing()
         }
     }
     
     private fun startNFCPairing() {
-        if (nfcAdapter == null || !nfcAdapter!!.isEnabled) {
-            Toast.makeText(requireContext(), "Please enable NFC to pair with other devices", Toast.LENGTH_LONG).show()
+        if (nfcAdapter == null) {
+            Toast.makeText(requireContext(), "NFC not supported on this device", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        if (!nfcAdapter!!.isEnabled) {
+            Toast.makeText(requireContext(), "Please enable NFC in Settings", Toast.LENGTH_SHORT).show()
             return
         }
         
@@ -201,31 +234,54 @@ class ProfileFragment : Fragment() {
             return
         }
         
-        isPairingActive = true
-        buttonStartPairing.text = "Stop Pairing"
-        buttonStartPairing.backgroundTintList = 
-            requireContext().getColorStateList(android.R.color.holo_red_dark)
-        textPairingInstructions.visibility = View.VISIBLE
-        
-        // Enable NFC foreground dispatch
-        enableNFCForegroundDispatch()
-        
-        Toast.makeText(requireContext(), "NFC pairing started. Hold devices together.", Toast.LENGTH_LONG).show()
-        Log.d(TAG, "NFC pairing started")
+        try {
+            isPairingActive = true
+            setupCardEmulation()
+            enableNFCForegroundDispatch()
+            
+            buttonStartPairing.text = "Stop NFC Pairing"
+            textPairingInstructions.text = "🔄 NFC Pairing Active\n\nBring another fishy.watch device close to this phone to pair.\n\nYour device is now discoverable and ready to share contact information."
+            
+            Toast.makeText(requireContext(), "NFC Pairing started! 📲", Toast.LENGTH_SHORT).show()
+            Log.d(TAG, "NFC pairing started")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error starting NFC pairing: ${e.message}", e)
+            Toast.makeText(requireContext(), "Error starting NFC pairing", Toast.LENGTH_SHORT).show()
+            isPairingActive = false
+        }
     }
     
     private fun stopNFCPairing() {
-        isPairingActive = false
-        buttonStartPairing.text = "Start NFC Pairing"
-        buttonStartPairing.backgroundTintList = 
-            requireContext().getColorStateList(R.color.blue_500)
-        textPairingInstructions.visibility = View.GONE
-        
-        // Disable NFC foreground dispatch
-        disableNFCForegroundDispatch()
-        
-        Toast.makeText(requireContext(), "NFC pairing stopped", Toast.LENGTH_SHORT).show()
-        Log.d(TAG, "NFC pairing stopped")
+        try {
+            isPairingActive = false
+            disableNFCForegroundDispatch()
+            
+            buttonStartPairing.text = "Start NFC Pairing"
+            textPairingInstructions.text = "🔗 Ready to Pair\n\nTap 'Start NFC Pairing' and bring another fishy.watch device close to exchange contact information securely."
+            
+            Toast.makeText(requireContext(), "NFC Pairing stopped ⏹️", Toast.LENGTH_SHORT).show()
+            Log.d(TAG, "NFC pairing stopped")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error stopping NFC pairing: ${e.message}", e)
+        }
+    }
+    
+    private fun setupCardEmulation() {
+        // Set our contact data in the HCE service so other devices can read it
+        NFCCardEmulationService.contactData = createContactData()
+        Log.d(TAG, "Card emulation set up with user data: $userName - $deviceId")
+    }
+    
+    private fun createContactData(): String {
+        val contactJson = org.json.JSONObject().apply {
+            put("name", userName)
+            put("deviceId", deviceId)
+            put("timestamp", System.currentTimeMillis())
+            put("appVersion", "1.0")
+        }
+        return contactJson.toString()
     }
     
     private fun enableNFCForegroundDispatch() {
@@ -234,7 +290,7 @@ class ProfileFragment : Fragment() {
                 requireActivity(),
                 pendingIntent,
                 intentFiltersArray,
-                arrayOf(arrayOf("android.nfc.tech.Ndef", "android.nfc.tech.NdefFormatable"))
+                arrayOf(arrayOf("android.nfc.tech.IsoDep")) // For reading HCE devices
             )
             Log.d(TAG, "NFC foreground dispatch enabled")
         } catch (e: Exception) {
@@ -277,23 +333,11 @@ class ProfileFragment : Fragment() {
         Log.d(TAG, "Handling NFC intent with action: $action")
         
         when (action) {
-            NfcAdapter.ACTION_NDEF_DISCOVERED -> {
-                Log.d(TAG, "NDEF discovered - reading contact data")
-                val messages = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES)
-                if (messages != null) {
-                    processNdefMessages(messages)
-                } else {
-                    Log.w(TAG, "No NDEF messages found in intent")
-                }
-            }
             NfcAdapter.ACTION_TECH_DISCOVERED, NfcAdapter.ACTION_TAG_DISCOVERED -> {
-                Log.d(TAG, "Tag/Tech discovered - attempting to read and write contact data")
+                Log.d(TAG, "NFC device discovered - attempting to read contact data via HCE")
                 val tag = intent.getParcelableExtra<Tag>(NfcAdapter.EXTRA_TAG)
                 if (tag != null) {
-                    // First try to read any existing data
-                    tryReadFromTag(tag)
-                    // Then try to write our data
-                    writeContactToNFC(tag)
+                    readContactFromHCEDevice(tag)
                 } else {
                     Log.w(TAG, "No NFC tag found in intent")
                 }
@@ -304,146 +348,89 @@ class ProfileFragment : Fragment() {
         }
     }
     
-    private fun processNdefMessages(messages: Array<android.os.Parcelable>) {
-        Log.d(TAG, "Processing ${messages.size} NDEF messages")
-        try {
-            for (message in messages) {
-                val ndefMessage = message as NdefMessage
-                Log.d(TAG, "Processing NDEF message with ${ndefMessage.records.size} records")
+    private fun readContactFromHCEDevice(tag: Tag) {
+        // Use coroutine for NFC communication to avoid blocking UI
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                Log.d(TAG, "Attempting to read contact data from HCE device")
+                val contact = NFCReader.readContactFromNFC(tag)
                 
-                for (record in ndefMessage.records) {
-                    val recordType = String(record.type, Charset.forName("UTF-8"))
-                    Log.d(TAG, "Processing record type: $recordType")
-                    
-                    if (recordType == "application/fishy.watch") {
-                        val payload = String(record.payload, Charset.forName("UTF-8"))
-                        Log.d(TAG, "Found fishy.watch record with payload: $payload")
-                        processReceivedContact(payload)
-                        return // Process only the first matching record
+                withContext(Dispatchers.Main) {
+                    if (contact != null) {
+                        Log.d(TAG, "Successfully received contact: ${contact.name} - ${contact.deviceId}")
+                        processReceivedContact(contact)
+                    } else {
+                        Log.w(TAG, "Failed to read contact data from device")
+                        Toast.makeText(requireContext(), "Could not read contact data. Make sure the other device is in pairing mode.", Toast.LENGTH_LONG).show()
                     }
                 }
-            }
-            Log.w(TAG, "No fishy.watch records found in NDEF messages")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error processing NDEF messages: ${e.message}", e)
-            Toast.makeText(requireContext(), "Error reading contact data: ${e.message}", Toast.LENGTH_SHORT).show()
-        }
-    }
-    
-    private fun tryReadFromTag(tag: Tag) {
-        try {
-            val ndef = Ndef.get(tag)
-            if (ndef != null) {
-                ndef.connect()
-                val ndefMessage = ndef.ndefMessage
-                if (ndefMessage != null) {
-                    Log.d(TAG, "Found existing NDEF message on tag, processing...")
-                    for (record in ndefMessage.records) {
-                        val recordType = String(record.type, Charset.forName("UTF-8"))
-                        Log.d(TAG, "Found record type on tag: $recordType")
-                        
-                        if (recordType == "application/fishy.watch") {
-                            val payload = String(record.payload, Charset.forName("UTF-8"))
-                            Log.d(TAG, "Found fishy.watch record on tag: $payload")
-                            processReceivedContact(payload)
-                            break
-                        }
-                    }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error reading from HCE device: ${e.message}", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(requireContext(), "Error during pairing: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
-                ndef.close()
             }
-        } catch (e: Exception) {
-            Log.d(TAG, "Could not read from tag (this is normal): ${e.message}")
-            // This is expected for blank tags or tags with different data
         }
     }
     
-    private fun writeContactToNFC(tag: Tag) {
+    private fun processReceivedContact(contact: TrustedContact) {
         try {
-            val contactData = createContactData()
-            Log.d(TAG, "Writing contact data: $contactData")
+            // Store the contact temporarily and start voice recording
+            pendingContact = contact
             
-            val payload = contactData.toByteArray(Charset.forName("UTF-8"))
-            val ndefRecord = NdefRecord.createMime("application/fishy.watch", payload)
-            val ndefMessage = NdefMessage(ndefRecord)
+            Toast.makeText(
+                requireContext(), 
+                "📞 Contact received: ${contact.name}\nStarting voice authentication...", 
+                Toast.LENGTH_LONG
+            ).show()
             
-            val ndef = Ndef.get(tag)
-            if (ndef != null) {
-                ndef.connect()
-                if (ndef.isWritable && ndef.maxSize >= ndefMessage.toByteArray().size) {
-                    ndef.writeNdefMessage(ndefMessage)
-                    ndef.close()
-                    
-                    Toast.makeText(requireContext(), "Contact shared successfully!", Toast.LENGTH_LONG).show()
-                    Log.d(TAG, "Contact written to NFC tag successfully")
-                } else {
-                    Log.e(TAG, "NFC tag is not writable or too small")
-                    Toast.makeText(requireContext(), "NFC tag cannot be written to", Toast.LENGTH_SHORT).show()
-                }
-            } else {
-                Log.e(TAG, "Tag does not support NDEF")
-                Toast.makeText(requireContext(), "NFC tag does not support data exchange", Toast.LENGTH_SHORT).show()
+            // Stop NFC pairing
+            stopNFCPairing()
+            
+            // Start voice recording activity
+            val intent = Intent(requireContext(), VoiceRecordingActivity::class.java).apply {
+                putExtra(VoiceRecordingActivity.EXTRA_CONTACT_NAME, contact.name)
+                putExtra(VoiceRecordingActivity.EXTRA_CONTACT_DEVICE_ID, contact.deviceId)
             }
+            voiceRecordingLauncher.launch(intent)
+            
+            Log.d(TAG, "Started voice recording for contact: ${contact.name} - ${contact.deviceId}")
             
         } catch (e: Exception) {
-            Log.e(TAG, "Error writing to NFC: ${e.message}", e)
-            Toast.makeText(requireContext(), "Error sharing contact: ${e.message}", Toast.LENGTH_SHORT).show()
+            Log.e(TAG, "Error starting voice recording: ${e.message}", e)
+            Toast.makeText(requireContext(), "Error starting voice recording", Toast.LENGTH_SHORT).show()
         }
     }
     
-    private fun createContactData(): String {
-        val contactJson = JSONObject().apply {
-            put("name", userName)
-            put("deviceId", deviceId)
-            put("timestamp", System.currentTimeMillis())
-            put("appVersion", "1.0")
-        }
-        return contactJson.toString()
-    }
-    
-    private fun processReceivedContact(contactData: String) {
+    private fun saveFinalContact(contact: TrustedContact) {
         try {
-            val contactJson = JSONObject(contactData)
-            val contactName = contactJson.getString("name")
-            val contactDeviceId = contactJson.getString("deviceId")
-            val contactTimestamp = contactJson.optLong("timestamp", System.currentTimeMillis())
-            val contactAppVersion = contactJson.optString("appVersion", "1.0")
-            
-            // Create TrustedContact object
-            val contact = TrustedContact(
-                name = contactName,
-                deviceId = contactDeviceId,
-                timestamp = contactTimestamp,
-                appVersion = contactAppVersion
-            )
-            
-            // Save to trusted contacts
+            // Save to trusted contacts with voice signature
             val success = ContactManager.addTrustedContact(requireContext(), contact)
             
             if (success) {
                 Toast.makeText(
                     requireContext(), 
-                    "✅ Contact added: $contactName", 
+                    "✅ Contact added successfully: ${contact.name}\n🎙️ Voice signature recorded", 
                     Toast.LENGTH_LONG
                 ).show()
                 
-                Log.d(TAG, "Successfully saved contact: $contactName - $contactDeviceId")
+                Log.d(TAG, "Successfully saved contact with voice signature: ${contact.name} - ${contact.deviceId}")
             } else {
                 Toast.makeText(
                     requireContext(), 
-                    "❌ Failed to save contact: $contactName", 
+                    "Contact updated: ${contact.name}", 
                     Toast.LENGTH_LONG
                 ).show()
                 
-                Log.e(TAG, "Failed to save contact: $contactName - $contactDeviceId")
+                Log.d(TAG, "Updated existing contact: ${contact.name} - ${contact.deviceId}")
             }
             
-            // Stop pairing after successful exchange
-            stopNFCPairing()
+            // Navigate back to Dashboard (trusted contacts page)
+            findNavController().navigate(R.id.navigation_dashboard)
             
         } catch (e: Exception) {
-            Log.e(TAG, "Error processing received contact: ${e.message}", e)
-            Toast.makeText(requireContext(), "Invalid contact data received", Toast.LENGTH_SHORT).show()
+            Log.e(TAG, "Error saving final contact: ${e.message}", e)
+            Toast.makeText(requireContext(), "Error saving contact data", Toast.LENGTH_SHORT).show()
         }
     }
     

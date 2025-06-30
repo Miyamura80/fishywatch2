@@ -30,6 +30,8 @@ import com.example.fishy_watch_2.PersistentNotificationService
 import com.example.fishy_watch_2.R
 import com.example.fishy_watch_2.databinding.FragmentDebugToolsBinding
 import java.util.concurrent.Executors
+import android.app.AlertDialog
+import com.example.fishy_watch_2.ContactManager
 
 class DebugToolsFragment : Fragment() {
 
@@ -68,6 +70,7 @@ class DebugToolsFragment : Fragment() {
     private lateinit var tvNotificationStatus: TextView
     private lateinit var tvTtsStatus: TextView
     private lateinit var tvCallStatus: TextView
+    private lateinit var btnClearAllContacts: Button
     
     // Auto-detection state
     private var autoDetectionEnabled = false
@@ -140,6 +143,7 @@ class DebugToolsFragment : Fragment() {
         tvCallStatus = binding.root.findViewById(R.id.tvCallStatus)
         btnToggleAutoDetection = binding.root.findViewById(R.id.btnToggleAutoDetection)
         btnToggleProtection = binding.root.findViewById(R.id.btnToggleProtection)
+        btnClearAllContacts = binding.root.findViewById(R.id.btnClearAllContacts)
     }
 
     private fun setupPermissionLaunchers() {
@@ -250,6 +254,10 @@ class DebugToolsFragment : Fragment() {
 
         btnToggleProtection.setOnClickListener {
             togglePersistentProtection()
+        }
+
+        btnClearAllContacts.setOnClickListener {
+            showClearAllContactsDialog()
         }
     }
 
@@ -662,6 +670,38 @@ class DebugToolsFragment : Fragment() {
                 Log.e(TAG, "Error stopping persistent protection: ${e.message}", e)
                 Toast.makeText(requireContext(), "Error stopping protection: ${e.message}", Toast.LENGTH_LONG).show()
             }
+        }
+    }
+
+    private fun showClearAllContactsDialog() {
+        val contacts = ContactManager.getTrustedContacts(requireContext())
+        
+        if (contacts.isEmpty()) {
+            Toast.makeText(requireContext(), "No trusted contacts to clear", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        AlertDialog.Builder(requireContext())
+            .setTitle("Clear All Trusted Contacts")
+            .setMessage("Are you sure you want to delete all ${contacts.size} trusted contacts?\n\nThis will permanently remove:\n• All contact information\n• All voice signatures\n• All pairing history\n\nThis action cannot be undone.")
+            .setPositiveButton("Delete All") { _, _ ->
+                clearAllContacts()
+            }
+            .setNegativeButton("Cancel") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .setIcon(android.R.drawable.ic_dialog_alert)
+            .show()
+    }
+    
+    private fun clearAllContacts() {
+        try {
+            ContactManager.clearAllContacts(requireContext())
+            Toast.makeText(requireContext(), "🗑️ All trusted contacts cleared successfully", Toast.LENGTH_LONG).show()
+            Log.d(TAG, "Successfully cleared all trusted contacts")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error clearing all contacts: ${e.message}", e)
+            Toast.makeText(requireContext(), "❌ Error clearing contacts: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 } 

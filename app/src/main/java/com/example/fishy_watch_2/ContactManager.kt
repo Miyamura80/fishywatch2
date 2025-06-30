@@ -12,7 +12,8 @@ data class TrustedContact(
     val name: String,
     val deviceId: String,
     val timestamp: Long,
-    val appVersion: String = "1.0"
+    val appVersion: String = "1.0",
+    val voiceSignaturePath: String? = null
 ) {
     fun getDisplayTimestamp(): String {
         val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
@@ -48,8 +49,12 @@ object ContactManager {
             // Check if contact already exists (by device ID)
             val existingIndex = existingContacts.indexOfFirst { it.deviceId == contact.deviceId }
             if (existingIndex >= 0) {
-                // Update existing contact with new timestamp
-                existingContacts[existingIndex] = contact.copy(timestamp = System.currentTimeMillis())
+                // Update existing contact with new timestamp and preserve voice signature
+                val existingContact = existingContacts[existingIndex]
+                existingContacts[existingIndex] = contact.copy(
+                    timestamp = System.currentTimeMillis(),
+                    voiceSignaturePath = contact.voiceSignaturePath ?: existingContact.voiceSignaturePath
+                )
                 Log.d(TAG, "Updated existing contact: ${contact.name}")
             } else {
                 // Add new contact
@@ -65,6 +70,7 @@ object ContactManager {
                     put("deviceId", c.deviceId)
                     put("timestamp", c.timestamp)
                     put("appVersion", c.appVersion)
+                    put("voiceSignaturePath", c.voiceSignaturePath ?: "")
                 }
                 contactsJson.put(contactObj)
             }
@@ -87,11 +93,13 @@ object ContactManager {
             val contacts = mutableListOf<TrustedContact>()
             for (i in 0 until contactsJson.length()) {
                 val contactObj = contactsJson.getJSONObject(i)
+                val voiceSignaturePath = contactObj.optString("voiceSignaturePath", "")
                 val contact = TrustedContact(
                     name = contactObj.getString("name"),
                     deviceId = contactObj.getString("deviceId"),
                     timestamp = contactObj.getLong("timestamp"),
-                    appVersion = contactObj.optString("appVersion", "1.0")
+                    appVersion = contactObj.optString("appVersion", "1.0"),
+                    voiceSignaturePath = if (voiceSignaturePath.isEmpty()) null else voiceSignaturePath
                 )
                 contacts.add(contact)
             }
@@ -107,9 +115,9 @@ object ContactManager {
     fun removeTrustedContact(context: Context, deviceId: String): Boolean {
         return try {
             val existingContacts = getTrustedContacts(context).toMutableList()
-            val removedCount = existingContacts.removeAll { it.deviceId == deviceId }
+            val wasRemoved = existingContacts.removeAll { it.deviceId == deviceId }
             
-            if (removedCount > 0) {
+            if (wasRemoved) {
                 val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 val contactsJson = JSONArray()
                 for (contact in existingContacts) {
@@ -118,6 +126,7 @@ object ContactManager {
                         put("deviceId", contact.deviceId)
                         put("timestamp", contact.timestamp)
                         put("appVersion", contact.appVersion)
+                        put("voiceSignaturePath", contact.voiceSignaturePath ?: "")
                     }
                     contactsJson.put(contactObj)
                 }

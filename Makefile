@@ -1,6 +1,5 @@
 
 
 build-and-run-on-connected-android-device:
-	./gradlew clean build
+	./gradlew assembleDebug 
 	./gradlew installDebug
-	./gradlew runDebug

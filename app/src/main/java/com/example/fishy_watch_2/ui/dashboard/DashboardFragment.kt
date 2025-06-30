@@ -1,5 +1,6 @@
 package com.example.fishy_watch_2.ui.dashboard
 
+import android.app.AlertDialog
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -18,6 +19,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.fishy_watch_2.ContactManager
 import com.example.fishy_watch_2.R
+import com.example.fishy_watch_2.TrustedContact
 import com.example.fishy_watch_2.databinding.FragmentDashboardBinding
 
 class DashboardFragment : Fragment() {
@@ -95,9 +97,38 @@ class DashboardFragment : Fragment() {
     }
     
     private fun setupContactsList() {
-        contactsAdapter = TrustedContactsAdapter()
+        contactsAdapter = TrustedContactsAdapter { contact ->
+            showDeleteConfirmationDialog(contact)
+        }
         recyclerTrustedContacts.layoutManager = LinearLayoutManager(requireContext())
         recyclerTrustedContacts.adapter = contactsAdapter
+    }
+    
+    private fun showDeleteConfirmationDialog(contact: TrustedContact) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Delete Trusted Contact")
+            .setMessage("Are you sure you want to delete '${contact.name}'?\n\nThis will remove their contact information and voice signature from your trusted contacts.")
+            .setPositiveButton("Delete") { _, _ ->
+                deleteContact(contact)
+            }
+            .setNegativeButton("Cancel") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .setIcon(android.R.drawable.ic_dialog_alert)
+            .show()
+    }
+    
+    private fun deleteContact(contact: TrustedContact) {
+        val success = ContactManager.removeTrustedContact(requireContext(), contact.deviceId)
+        
+        if (success) {
+            Toast.makeText(requireContext(), "✅ Deleted '${contact.name}' from trusted contacts", Toast.LENGTH_SHORT).show()
+            Log.d(TAG, "Successfully deleted contact: ${contact.name} - ${contact.deviceId}")
+            loadTrustedContacts() // Refresh the list
+        } else {
+            Toast.makeText(requireContext(), "❌ Failed to delete contact", Toast.LENGTH_SHORT).show()
+            Log.e(TAG, "Failed to delete contact: ${contact.name} - ${contact.deviceId}")
+        }
     }
     
     private fun loadTrustedContacts() {

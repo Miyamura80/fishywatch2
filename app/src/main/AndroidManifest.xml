@@ -21,7 +21,13 @@
 
     <!-- NFC permissions for device pairing -->
     <uses-permission android:name="android.permission.NFC"/>
+    <uses-permission android:name="android.permission.BIND_NFC_SERVICE"/>
     <uses-feature android:name="android.hardware.nfc" android:required="false"/>
+    <uses-feature android:name="android.hardware.nfc.hce" android:required="false"/>
+
+    <!-- Audio recording permissions for voice authentication -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
 
     <application
         android:allowBackup="true"
@@ -58,6 +64,13 @@
                 android:resource="@xml/nfc_tech_filter" />
         </activity>
 
+        <!-- Voice recording activity for contact authentication -->
+        <activity
+            android:name=".VoiceRecordingActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Fishywatch2"
+            android:screenOrientation="portrait" />
+
         <!-- Foreground service that hosts the overlay -->
         <service
             android:name=".OverlayService"
@@ -69,6 +82,18 @@
             android:name=".PersistentNotificationService"
             android:exported="false"
             android:foregroundServiceType="remoteMessaging"/>
+
+        <!-- NFC Host Card Emulation service for device pairing -->
+        <service
+            android:name=".NFCCardEmulationService"
+            android:exported="true"
+            android:permission="android.permission.BIND_NFC_SERVICE">
+            <intent-filter>
+                <action android:name="android.nfc.cardemulation.action.HOST_APDU_SERVICE"/>
+            </intent-filter>
+            <meta-data android:name="android.nfc.cardemulation.host_apdu_service"
+                android:resource="@xml/aid_list"/>
+        </service>
     </application>
 
 </manifest>

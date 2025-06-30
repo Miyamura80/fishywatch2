@@ -8,7 +8,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.fishy_watch_2.R
 import com.example.fishy_watch_2.TrustedContact
 
-class TrustedContactsAdapter : RecyclerView.Adapter<TrustedContactsAdapter.ContactViewHolder>() {
+class TrustedContactsAdapter(
+    private val onDeleteClick: (TrustedContact) -> Unit
+) : RecyclerView.Adapter<TrustedContactsAdapter.ContactViewHolder>() {
     
     private var contacts: List<TrustedContact> = emptyList()
     
@@ -35,13 +37,28 @@ class TrustedContactsAdapter : RecyclerView.Adapter<TrustedContactsAdapter.Conta
         private val textDevice: TextView = itemView.findViewById(R.id.textContactDevice)
         private val textExchanged: TextView = itemView.findViewById(R.id.textContactExchanged)
         private val textLastSeen: TextView = itemView.findViewById(R.id.textContactLastSeen)
+        private val buttonDelete: TextView = itemView.findViewById(R.id.buttonDeleteContact)
         
         fun bind(contact: TrustedContact) {
             textName.text = contact.name
-            textStatus.text = "● offline"
+            
+            // Hide online/offline status as requested
+            textStatus.visibility = View.GONE
+            
             textDevice.text = "Device: ${contact.deviceId}"
             textExchanged.text = "✓ Exchanged ${contact.getDisplayTimestamp()}"
-            textLastSeen.text = "🕐 Last seen ${contact.getLastSeenText()}"
+            
+            // Show voice signature status instead of last seen
+            if (contact.voiceSignaturePath != null) {
+                textLastSeen.text = "🎙️ Voice signature recorded"
+            } else {
+                textLastSeen.text = "⚠️ Voice signature missing"
+            }
+            
+            // Handle delete button click
+            buttonDelete.setOnClickListener {
+                onDeleteClick(contact)
+            }
         }
     }
 } 

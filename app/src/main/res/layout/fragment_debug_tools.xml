@@ -479,6 +479,15 @@
                     android:layout_height="wrap_content"
                     android:text="⚙️ Open App Settings"
                     android:backgroundTint="#9C27B0"
+                    android:textColor="@android:color/white"
+                    android:layout_marginBottom="8dp" />
+
+                <Button
+                    android:id="@+id/btnClearAllContacts"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="🗑️ Clear All Trusted Contacts"
+                    android:backgroundTint="#F44336"
                     android:textColor="@android:color/white" />
 
             </LinearLayout>

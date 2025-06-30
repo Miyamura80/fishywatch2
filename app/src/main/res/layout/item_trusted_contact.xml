@@ -28,7 +28,22 @@
             android:layout_height="wrap_content"
             android:text="● offline"
             android:textSize="12sp"
-            android:textColor="#F44336" />
+            android:textColor="#F44336"
+            android:layout_marginEnd="8dp" />
+
+        <!-- Delete Button -->
+        <TextView
+            android:id="@+id/buttonDeleteContact"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:text="✖"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#F44336"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true" />
 
     </LinearLayout>
 

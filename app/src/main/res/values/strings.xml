@@ -12,4 +12,8 @@
     <string name="last_seen">Last seen</string>
     <string name="exchanged">Exchanged</string>
     <string name="device">Device</string>
+    
+    <!-- NFC HCE Service -->
+    <string name="servicedesc">fishy.watch NFC contact sharing service</string>
+    <string name="aiddescription">fishy.watch trusted contact pairing</string>
 </resources>
