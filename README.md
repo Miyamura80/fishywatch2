@@ -41,7 +41,7 @@
 
 ## Key Features
 
-- Protect your boomer parents from deepfake phishing calls! 🛡️
+- Protect your loved ones who are tech-illiterate from deepfake phishing calls! 🛡️
 - Prevent fraud, tight social engineering security via NFC-cryptographic key exchange, by touching grass 🌿
 - 2FA network to catch discrepancies between high-trust networked devices
 - **Proximity-based key exchange** using NFC or Nearby Connections for secure device pairing
