@@ -72,20 +72,16 @@ The proximity-based features (NFC and Nearby Connections) require a custom devel
 
 #### Setup Steps
 
-1. **Install dependencies**:
-```bash
-npm install
-npx expo install expo-dev-client expo-nearby-connections
-```
+1. **Connect your android phone to the pc**
 
-2. **Generate native project files**:
-```bash
-npx expo prebuild --platform android
-```
+<p align="center">
+  <img src="media/connect_cable.jpeg" alt="2" width="600">
+</p>
 
-3. **Build and install custom development app**:
+
+2. **Run this**
 ```bash
-npx expo run:android
+make build-and-run-on-connected-android-device
 ```
 
 This will:
