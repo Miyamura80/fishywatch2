@@ -28,6 +28,11 @@
 
 </p>
 
+<p align="center">
+  <img src="media/fishy.gif" alt="2" width="600">
+</p>
+
+
 --- 
 
 <p align="center">
